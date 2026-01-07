@@ -13,8 +13,11 @@
 [![discord](https://img.shields.io/discord/1159501506232451173?logo=discord&label=discord&labelColor=fff&color=5865f2&link=https%3A%2F%2Fdiscord.gg%2FGbfgXGJ8Bk)](https://discord.gg/GbfgXGJ8Bk)
 
 ---
-2026/01/07 - 
-This is RF-DETR with PR263 included for custom augmentations.
+## This is RF-DETR 1.3.0 with custom changes.
+
+- 2026/01/07 - Added [PR263](https://github.com/roboflow/rf-detr/pull/263) for custom augmentations.
+- 2026/01/07 - Added class metrics to tensorboard sink (commit [5ca80e2](https://github.com/jrdalenberg/rf-detr/commit/5ca80e26de0687de6b7fedbaba091c93387cec2b))
+
 ---
 
 RF-DETR is a real-time, transformer-based object detection and instance segmentation model architecture developed by Roboflow and released under the Apache 2.0 license.
