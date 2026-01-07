@@ -1,4 +1,5 @@
-from typing import Optional
+from typing import Any, Dict, Optional
+import math
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -113,6 +114,26 @@ class MetricsPlotSink:
         plt.close(fig)
         print(f"Results saved to {self.output_dir}/{PLOT_FILE_NAME}")
 
+def safe_index(x, i):
+    try:
+        return x[i]
+    except Exception:
+        return None
+
+def _slug(s: str) -> str:
+    # Make class names TensorBoard-tag-safe
+    return (
+        s.replace(" ", "_")
+         .replace("/", "_")
+         .replace("\\", "_")
+         .replace("(", "")
+         .replace(")", "")
+         .replace(":", "")
+         .replace(",", "")
+    )
+
+def _is_number(x: Any) -> bool:
+    return isinstance(x, (int, float)) and not (isinstance(x, float) and math.isnan(x))
 
 class MetricsTensorBoardSink:
     """
@@ -125,16 +146,20 @@ class MetricsTensorBoardSink:
     def __init__(self, output_dir: str):
         if SummaryWriter:
             self.writer = SummaryWriter(log_dir=output_dir)
-            print(f"TensorBoard logging initialized. To monitor logs, use 'tensorboard --logdir {output_dir}' and open http://localhost:6006/ in browser.")
+            print(
+                f"TensorBoard logging initialized. "
+                f"To monitor logs, use 'tensorboard --logdir {output_dir}' "
+                f"and open http://localhost:6006/ in browser."
+            )
         else:
             self.writer = None
-            print("Unable to initialize TensorBoard. Logging is turned off for this session.  Run 'pip install tensorboard' to enable logging.")
+            print("Unable to initialize TensorBoard. Logging is turned off for this session. Run 'pip install tensorboard' to enable logging.")
 
     def update(self, values: dict):
         if not self.writer:
             return
 
-        epoch = values['epoch']
+        epoch = values.get('epoch', 0)
 
         if 'train_loss' in values:
             self.writer.add_scalar("Loss/Train", values['train_loss'], epoch)
@@ -165,13 +190,35 @@ class MetricsTensorBoardSink:
             if ema_ar50_90 is not None:
                 self.writer.add_scalar("Metrics/EMA/AR50_90", ema_ar50_90, epoch)
 
+        if 'test_results_json' in values:
+            self._log_class_metrics(values['test_results_json'], epoch, prefix="Base/")
+        if 'ema_test_results_json' in values:
+            self._log_class_metrics(values['ema_test_results_json'], epoch, prefix="EMA/")
+
         self.writer.flush()
 
     def close(self):
         if not self.writer:
             return
-        
         self.writer.close()
+
+    def _log_class_metrics(self, results: Dict[str, Any], epoch: int, prefix: str):
+        """
+        Log per-class metrics with short tags:
+        <prefix><ClassName>/mAP50, precision, recall
+        """
+        class_map = results.get("class_map", [])
+        if isinstance(class_map, list) and class_map:
+            for entry in class_map:
+                cname = _slug(entry.get("class", "unknown"))
+                metrics = {
+                    "mAP50": entry.get("map@50", None),
+                    "precision": entry.get("precision", None),
+                    "recall": entry.get("recall", None),
+                }
+                for metric_name, value in metrics.items():
+                    if _is_number(value):
+                        self.writer.add_scalar(f"{prefix}{cname}/{metric_name}", value, epoch)
 
 class MetricsWandBSink:
     """
