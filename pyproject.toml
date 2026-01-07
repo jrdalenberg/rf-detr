@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rfdetr"
-version = "1.3.0"
-description = "RF-DETR"
+version = "1.3.0-custom"
+description = "RF-DETR-custom"
 readme = "README.md"
 authors = [
     {name = "Roboflow, Inc", email = "peter@roboflow.com"}
