@@ -15,7 +15,6 @@
 ---
 ## This is RF-DETR 1.3.0 with custom changes.
 
-- 2026/01/07 - Added [PR263](https://github.com/roboflow/rf-detr/pull/263) for custom augmentations.
 - 2026/01/07 - Added class metrics to tensorboard sink (commit [5ca80e2](https://github.com/jrdalenberg/rf-detr/commit/5ca80e26de0687de6b7fedbaba091c93387cec2b))
 
 ---
