@@ -17,6 +17,7 @@
 
 - 2026/01/07 - Added class metrics to tensorboard sink (commit [5ca80e2](https://github.com/jrdalenberg/rf-detr/commit/5ca80e26de0687de6b7fedbaba091c93387cec2b))
 - 2026/01/14 - Added "New seg release dinov2b release" [#539](https://github.com/roboflow/rf-detr/pull/539)"
+- 2026/01/14 - Added vertical flips to augmentations (commit [c76f9a6](https://github.com/jrdalenberg/rf-detr/commit/c76f9a657bde694e7c0dafb1c5fe33b5cfee4426))
 
 ---
 
