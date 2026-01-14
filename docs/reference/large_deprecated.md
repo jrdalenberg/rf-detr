@@ -1,3 +1,3 @@
-:::rfdetr.detr.RFDETRLargeEdge
+:::rfdetr.detr.RFDETRLargeDeprecated
     options:
       inherited_members: true
