@@ -37,7 +37,7 @@ class ModelConfig(BaseModel):
     cls_loss_coef: float = 1.0
     segmentation_head: bool = False
     mask_downsample_ratio: int = 4
-    license: str = "apache-2.0"
+    license: str = "Apache-2.0"
 
 
 class RFDETRBaseConfig(ModelConfig):
@@ -109,8 +109,8 @@ class RFDETRMediumConfig(RFDETRBaseConfig):
     pretrain_weights: Optional[str] = "rf-detr-medium.pth"
 
 
-#res 704, ps 16, 2 windows, 4 dec layers, 300 queries, ViT-S basis    
-class RFDETRLargeEdgeConfig(ModelConfig):
+#res 704, ps 16, 2 windows, 4 dec layers, 300 queries, ViT-S basis
+class RFDETRLargeConfig(ModelConfig):
     encoder: Literal["dinov2_windowed_small"] = "dinov2_windowed_small"
     hidden_dim: int = 256
     dec_layers: int = 4
@@ -198,7 +198,7 @@ class RFDETRSegLargeConfig(RFDETRBaseConfig):
     num_classes: int = 90
 
 
-class RFDETRSegXLConfig(RFDETRBaseConfig):
+class RFDETRSegXLargeConfig(RFDETRBaseConfig):
     segmentation_head: bool = True
     out_feature_indexes: List[int] = [3, 6, 9, 12]
     num_windows: int = 2
@@ -212,7 +212,7 @@ class RFDETRSegXLConfig(RFDETRBaseConfig):
     num_classes: int = 90
 
 
-class RFDETRSegXXLConfig(RFDETRBaseConfig):
+class RFDETRSeg2XLargeConfig(RFDETRBaseConfig):
     segmentation_head: bool = True
     out_feature_indexes: List[int] = [3, 6, 9, 12]
     num_windows: int = 2

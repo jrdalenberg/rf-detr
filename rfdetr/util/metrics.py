@@ -286,5 +286,5 @@ class MetricsWandBSink:
     def close(self):
         if not wandb or not self.run:
             return
-            
+
         self.run.finish()
