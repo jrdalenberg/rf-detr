@@ -20,21 +20,22 @@ Mostly copy-paste from https://github.com/pytorch/vision/blob/edfd5a7/references
 The difference is that there is less copy-pasting from pycocotools
 in the end of the file, as python3 can suppress prints with contextlib
 """
-import os
 import contextlib
 import copy
-import numpy as np
-import torch
+import os
+from typing import Any, Dict, List, Tuple
 
-from pycocotools.cocoeval import COCOeval
-from pycocotools.coco import COCO
+import numpy as np
 import pycocotools.mask as mask_util
+import supervision as sv
+from pycocotools.coco import COCO
+from pycocotools.cocoeval import COCOeval
 
 from rfdetr.util.misc import all_gather
 
 
 class CocoEvaluator(object):
-    def __init__(self, coco_gt, iou_types, max_dets=100):
+    def __init__(self, coco_gt: COCO, iou_types: List[str], max_dets: int = 100) -> None:
         assert isinstance(iou_types, (list, tuple))
         coco_gt = copy.deepcopy(coco_gt)
         self.coco_gt = coco_gt
@@ -46,10 +47,10 @@ class CocoEvaluator(object):
             self.coco_eval[iou_type] = COCOeval(coco_gt, iouType=iou_type)
             self.coco_eval[iou_type].params.maxDets = [1, 10, max_dets]
 
-        self.img_ids = []
-        self.eval_imgs = {k: [] for k in iou_types}
+        self.img_ids: List[int] = []
+        self.eval_imgs: Dict[str, List[COCOeval]] = {k: [] for k in iou_types}
 
-    def update(self, predictions):
+    def update(self, predictions: Dict[int, Any]) -> None:
         img_ids = list(np.unique(list(predictions.keys())))
         self.img_ids.extend(img_ids)
 
@@ -68,21 +69,21 @@ class CocoEvaluator(object):
 
             self.eval_imgs[iou_type].append(eval_imgs)
 
-    def synchronize_between_processes(self):
+    def synchronize_between_processes(self) -> None:
         for iou_type in self.iou_types:
             self.eval_imgs[iou_type] = np.concatenate(self.eval_imgs[iou_type], 2)
             create_common_coco_eval(self.coco_eval[iou_type], self.img_ids, self.eval_imgs[iou_type])
 
-    def accumulate(self):
+    def accumulate(self) -> None:
         for coco_eval in self.coco_eval.values():
             coco_eval.accumulate()
 
-    def summarize(self):
+    def summarize(self) -> None:
         for iou_type, coco_eval in self.coco_eval.items():
             print("IoU metric: {}".format(iou_type))
             patched_pycocotools_summarize(coco_eval)
 
-    def prepare(self, predictions, iou_type):
+    def prepare(self, predictions: Dict[int, Any], iou_type: str) -> List[Dict[str, Any]]:
         if iou_type == "bbox":
             return self.prepare_for_coco_detection(predictions)
         elif iou_type == "segm":
@@ -92,14 +93,14 @@ class CocoEvaluator(object):
         else:
             raise ValueError("Unknown iou type {}".format(iou_type))
 
-    def prepare_for_coco_detection(self, predictions):
+    def prepare_for_coco_detection(self, predictions: Dict[int, Any]) -> List[Dict[str, Any]]:
         coco_results = []
         for original_id, prediction in predictions.items():
             if len(prediction) == 0:
                 continue
 
             boxes = prediction["boxes"]
-            boxes = convert_to_xywh(boxes).tolist()
+            boxes = sv.xyxy_to_xywh(boxes.cpu().numpy()).tolist()
             scores = prediction["scores"].tolist()
             labels = prediction["labels"].tolist()
 
@@ -116,7 +117,7 @@ class CocoEvaluator(object):
             )
         return coco_results
 
-    def prepare_for_coco_segmentation(self, predictions):
+    def prepare_for_coco_segmentation(self, predictions: Dict[int, Any]) -> List[Dict[str, Any]]:
         coco_results = []
         for original_id, prediction in predictions.items():
             if len(prediction) == 0:
@@ -151,14 +152,14 @@ class CocoEvaluator(object):
             )
         return coco_results
 
-    def prepare_for_coco_keypoint(self, predictions):
+    def prepare_for_coco_keypoint(self, predictions: Dict[int, Any]) -> List[Dict[str, Any]]:
         coco_results = []
         for original_id, prediction in predictions.items():
             if len(prediction) == 0:
                 continue
 
             boxes = prediction["boxes"]
-            boxes = convert_to_xywh(boxes).tolist()
+            boxes = sv.xyxy_to_xywh(boxes.cpu().numpy()).tolist()
             scores = prediction["scores"].tolist()
             labels = prediction["labels"].tolist()
             keypoints = prediction["keypoints"]
@@ -178,12 +179,7 @@ class CocoEvaluator(object):
         return coco_results
 
 
-def convert_to_xywh(boxes):
-    xmin, ymin, xmax, ymax = boxes.unbind(1)
-    return torch.stack((xmin, ymin, xmax - xmin, ymax - ymin), dim=1)
-
-
-def merge(img_ids, eval_imgs):
+def merge(img_ids: List[int], eval_imgs: Any) -> Tuple[np.ndarray, np.ndarray]:
     all_img_ids = all_gather(img_ids)
     all_eval_imgs = all_gather(eval_imgs)
 
@@ -205,7 +201,7 @@ def merge(img_ids, eval_imgs):
     return merged_img_ids, merged_eval_imgs
 
 
-def create_common_coco_eval(coco_eval, img_ids, eval_imgs):
+def create_common_coco_eval(coco_eval: COCOeval, img_ids: List[int], eval_imgs: Any) -> None:
     img_ids, eval_imgs = merge(img_ids, eval_imgs)
     img_ids = list(img_ids)
     eval_imgs = list(eval_imgs.flatten())
@@ -219,12 +215,38 @@ def create_common_coco_eval(coco_eval, img_ids, eval_imgs):
 # From pycocotools, just removed the prints and fixed
 # a Python3 bug about unicode not defined
 #################################################################
+# Copyright (c) 2014, Piotr Dollar and Tsung-Yi Lin
+# All rights reserved.
+
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+# ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+# ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+# The views and conclusions contained in the software and documentation are those
+# of the authors and should not be interpreted as representing official policies,
+# either expressed or implied, of the FreeBSD Project.
+#################################################################
 
 
-def evaluate(self):
+def evaluate(self: COCOeval) -> Tuple[List[int], np.ndarray]:
     '''
     Run per image evaluation on given images and store results (a list of dict) in self.evalImgs
-    :return: None
     '''
     # tic = time.time()
     # print('Running per image evaluation...')

@@ -22,19 +22,29 @@ LW-DETR model and criterion classes
 import copy
 import math
 from typing import Callable
+
 import torch
 import torch.nn.functional as F
 from torch import nn
 
-from rfdetr.util import box_ops
-from rfdetr.util.misc import (NestedTensor, nested_tensor_from_tensor_list,
-                       accuracy, get_world_size,
-                       is_dist_avail_and_initialized)
-
 from rfdetr.models.backbone import build_backbone
 from rfdetr.models.matcher import build_matcher
+from rfdetr.models.segmentation_head import (
+    SegmentationHead,
+    calculate_uncertainty,
+    get_uncertain_point_coords_with_randomness,
+    point_sample,
+)
 from rfdetr.models.transformer import build_transformer
-from rfdetr.models.segmentation_head import SegmentationHead, get_uncertain_point_coords_with_randomness, point_sample, calculate_uncertainty
+from rfdetr.util import box_ops
+from rfdetr.util.misc import (
+    NestedTensor,
+    accuracy,
+    get_world_size,
+    is_dist_avail_and_initialized,
+    nested_tensor_from_tensor_list,
+)
+
 
 class LWDETR(nn.Module):
     """ This is the Group DETR v3 module that performs object detection """
@@ -609,7 +619,7 @@ class SetCriterion(nn.Module):
                     # Logging is enabled only for the last layer
                     kwargs['log'] = False
                 l_dict = self.get_loss(loss, enc_outputs, targets, indices, num_boxes, **kwargs)
-                l_dict = {k + f'_enc': v for k, v in l_dict.items()}
+                l_dict = {k + '_enc': v for k, v in l_dict.items()}
                 losses.update(l_dict)
 
         return losses
@@ -794,7 +804,7 @@ def build_model(args):
     # For more details on this, check the following discussion
     # https://github.com/facebookresearch/detr/issues/108#issuecomment-650269223
     num_classes = args.num_classes + 1
-    device = torch.device(args.device)
+    torch.device(args.device)
 
 
     backbone = build_backbone(
@@ -859,17 +869,14 @@ def build_criterion_and_postprocessors(args):
         for i in range(args.dec_layers - 1):
             aux_weight_dict.update({k + f'_{i}': v for k, v in weight_dict.items()})
         if args.two_stage:
-            aux_weight_dict.update({k + f'_enc': v for k, v in weight_dict.items()})
+            aux_weight_dict.update({k + '_enc': v for k, v in weight_dict.items()})
         weight_dict.update(aux_weight_dict)
 
     losses = ['labels', 'boxes', 'cardinality']
     if args.segmentation_head:
         losses.append('masks')
 
-    try:
-        sum_group_losses = args.sum_group_losses
-    except:
-        sum_group_losses = False
+    sum_group_losses = getattr(args, 'sum_group_losses', False)
     if args.segmentation_head:
         criterion = SetCriterion(args.num_classes + 1, matcher=matcher, weight_dict=weight_dict,
                                 focal_alpha=args.focal_alpha, losses=losses,

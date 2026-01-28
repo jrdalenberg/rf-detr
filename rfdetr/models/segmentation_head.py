@@ -5,10 +5,11 @@
 # ------------------------------------------------------------------------
 
 
+from typing import Callable
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Callable
 
 
 class DepthwiseConvBlock(nn.Module):
@@ -111,7 +112,7 @@ class SegmentationHead(nn.Module):
         target_size = (image_size[0] // self.downsample_ratio, image_size[1] // self.downsample_ratio)
         spatial_features = F.interpolate(spatial_features, size=target_size, mode='bilinear', align_corners=False)
 
-        num_points = max(spatial_features.shape[-2], spatial_features.shape[-2] * spatial_features.shape[-1] // 16)
+        # num_points = max(spatial_features.shape[-2], spatial_features.shape[-2] * spatial_features.shape[-1] // 16)
 
         output_dicts = []
 
@@ -237,7 +238,7 @@ def get_uncertain_point_coords_with_randomness(
     return point_coords
 
 
-def calculate_uncertainty(logits):
+def calculate_uncertainty(logits: torch.Tensor) -> torch.Tensor:
     """
     We estimate uncerainty as L1 distance between 0.0 and the logit prediction in 'logits' for the
         foreground class in `classes`.
