@@ -140,7 +140,7 @@ class RFDETR:
             coco_path = os.path.join(dataset_dir, "train", "_annotations.coco.json")
             with open(coco_path, "r") as f:
                 anns = json.load(f)
-            class_names = [c["name"] for c in anns["categories"] if c["supercategory"] != "none"]
+            class_names = [c["name"] for c in anns["categories"]]
             return class_names
 
         # list all YAML files in the folder
